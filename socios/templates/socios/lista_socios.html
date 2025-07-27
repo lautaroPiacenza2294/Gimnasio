@@ -1,0 +1,254 @@
+{% extends 'socios/base.html' %}
+
+{% block title %}Lista de Socios - Gimnasio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="mb-0">
+                <i class="fas fa-users text-primary me-2"></i>
+                Lista de Socios
+            </h1>
+            <p class="text-muted mb-0">Gestión de todos los socios del gimnasio</p>
+        </div>
+        <a href="{% url 'registrar_socio' %}" class="btn btn-primary btn-custom">
+            <i class="fas fa-user-plus me-2"></i>Nuevo Socio
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card stat-card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h6 class="mb-3">Filtrar por estado:</h6>
+                <div class="btn-group" role="group">
+                    <a href="?estado=todos" class="btn {% if estado_filtro == 'todos' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        Todos
+                    </a>
+                    <a href="?estado=activos" class="btn {% if estado_filtro == 'activos' %}btn-success{% else %}btn-outline-success{% endif %}">
+                        Al Día
+                    </a>
+                    <a href="?estado=vencidos" class="btn {% if estado_filtro == 'vencidos' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                        Vencidos
+                    </a>
+                    <a href="?estado=inactivos" class="btn {% if estado_filtro == 'inactivos' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                        Inactivos
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="input-group" style="max-width: 300px; margin-left: auto;">
+                    <input type="text" id="buscarSocio" class="form-control" placeholder="Buscar socio...">
+                    <span class="input-group-text">
+                        <i class="fas fa-search"></i>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Socios -->
+<div class="card stat-card">
+    <div class="card-body">
+        {% if socios %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="tablaSocios">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Socio</th>
+                            <th>DNI</th>
+                            <th>Plan</th>
+                            <th>Código</th>
+                            <th>Estado</th>
+                            <th>Vencimiento</th>
+                            <th>Contacto</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for socio in socios %}
+                        <tr data-nombre="{{ socio.nombre|lower }} {{ socio.apellido|lower }}" data-dni="{{ socio.dni }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3">
+                                        {{ socio.nombre.0 }}{{ socio.apellido.0 }}
+                                    </div>
+                                    <div>
+                                        <strong>{{ socio.nombre }} {{ socio.apellido }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ socio.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ socio.dni }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ socio.plan.nombre }}</span>
+                                <br>
+                                <small class="text-muted">${{ socio.plan.precio|floatformat:0 }}</small>
+                            </td>
+                            <td>
+                                <code>{{ socio.codigo_acceso }}</code>
+                            </td>
+                            <td>
+                                <span class="badge {{ socio.estado_badge_class }}">{{ socio.estado_texto }}</span>
+                            </td>
+                            <td>
+                                {% if socio.fecha_vencimiento_actual %}
+                                    {{ socio.fecha_vencimiento_actual|date:"d/m/Y" }}
+                                    <br>
+                                    <small class="{% if socio.dias_hasta_vencimiento <= 7 %}text-warning{% else %}text-muted{% endif %}">
+                                        {{ socio.dias_vencido_texto }}
+                                    </small>
+                                {% else %}
+                                    <span class="text-muted">Sin pagos</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    {% if socio.telefono %}
+                                        <i class="fas fa-phone me-1"></i>{{ socio.telefono }}
+                                    {% else %}
+                                        <span class="text-muted">Sin teléfono</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="verDetalleSocio({{ socio.id }})" title="Ver detalle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success" onclick="registrarPago({{ socio.id }})" title="Registrar pago">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="probarFichaje('{{ socio.codigo_acceso }}')" title="Probar fichaje">
+                                        <i class="fas fa-fingerprint"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No hay socios registrados</h5>
+                <p class="text-muted">Comienza registrando tu primer socio</p>
+                <a href="{% url 'registrar_socio' %}" class="btn btn-primary btn-custom">
+                    <i class="fas fa-user-plus me-2"></i>Registrar Socio
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal para detalles del socio -->
+<div class="modal fade" id="modalDetalleSocio" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalle del Socio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoDetalleSocio">
+                <!-- Se carga via JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+</style>
+
+<script>
+// Buscar socios en tiempo real
+document.getElementById('buscarSocio').addEventListener('input', function() {
+    const termino = this.value.toLowerCase();
+    const filas = document.querySelectorAll('#tablaSocios tbody tr');
+    
+    filas.forEach(function(fila) {
+        const nombre = fila.getAttribute('data-nombre');
+        const dni = fila.getAttribute('data-dni');
+        
+        if (nombre.includes(termino) || dni.includes(termino)) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+});
+
+// Ver detalle del socio
+function verDetalleSocio(socioId) {
+    document.getElementById('contenidoDetalleSocio').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando información del socio...</p>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalDetalleSocio'));
+    modal.show();
+    
+    // Simulación de carga de datos
+    setTimeout(() => {
+        document.getElementById('contenidoDetalleSocio').innerHTML = `
+            <p class="text-muted">Funcionalidad en desarrollo. Socio ID: ${socioId}</p>
+            <p>Aquí se mostrarán:</p>
+            <ul>
+                <li>Historial de pagos</li>
+                <li>Historial de ingresos</li>
+                <li>Información completa del socio</li>
+            </ul>
+        `;
+    }, 1000);
+}
+
+// Registrar pago
+function registrarPago(socioId) {
+    alert('Funcionalidad de registro de pago en desarrollo. Socio ID: ' + socioId);
+}
+
+// Probar fichaje
+function probarFichaje(codigoAcceso) {
+    if (confirm('¿Deseas probar el fichaje para este socio?')) {
+        fetch(`/socios/fichar/${codigoAcceso}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.estado === 'aprobado') {
+                alert(`✅ ${data.mensaje}\nDías restantes esta semana: ${data.dias_restantes_semana}`);
+            } else {
+                alert(`❌ ${data.mensaje}`);
+            }
+        })
+        .catch(error => {
+            alert('Error al probar el fichaje: ' + error);
+        });
+    }
+}
+</script>
+{% endblock %}

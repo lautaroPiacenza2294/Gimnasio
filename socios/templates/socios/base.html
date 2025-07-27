@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Panel Administrativo - Gimnasio{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar {
+            background-color: white;
+            min-height: calc(100vh - 76px);
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            border-right: 1px solid #e9ecef;
+        }
+        
+        .sidebar .nav-link {
+            color: #495057;
+            padding: 15px 20px;
+            border-bottom: 1px solid #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: none;
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+        }
+        
+        .bg-primary-gradient { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .bg-success-gradient { background: linear-gradient(135deg, #27ae60, #229954); }
+        .bg-warning-gradient { background: linear-gradient(135deg, #f39c12, #e67e22); }
+        .bg-danger-gradient { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .btn-custom {
+            border-radius: 25px;
+            padding: 8px 25px;
+            font-weight: 500;
+        }
+        
+        .content-wrapper {
+            padding: 20px;
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+                <i class="fas fa-dumbbell me-2"></i>
+                Gimnasio Admin
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <span class="navbar-text text-white">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            <span id="fecha-actual"></span>
+                        </span>
+                    </li>
+                    <li class="nav-item dropdown ms-3">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> Administrador
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/admin/"><i class="fas fa-cog me-2"></i>Django Admin</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-0">
+                <nav class="nav flex-column">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+                        <i class="fas fa-chart-dashboard me-2"></i> Dashboard
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'lista_socios' %}active{% endif %}" href="{% url 'lista_socios' %}">
+                        <i class="fas fa-users me-2"></i> Socios
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'registrar_socio' %}active{% endif %}" href="{% url 'registrar_socio' %}">
+                        <i class="fas fa-user-plus me-2"></i> Nuevo Socio
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'lista_ingresos' %}active{% endif %}" href="{% url 'lista_ingresos' %}">
+                        <i class="fas fa-door-open me-2"></i> Ingresos
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'registrar_pago_form' %}active{% endif %}" href="{% url 'registrar_pago_form' %}">
+                        <i class="fas fa-money-bill me-2"></i> Pagos
+                    </a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'reporte_recaudacion' %}active{% endif %}" href="{% url 'reporte_recaudacion' %}">
+                        <i class="fas fa-chart-line me-2"></i> Reportes
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Content -->
+            <div class="col-md-10 content-wrapper">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% block content %}
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Mostrar fecha actual
+        document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        // Auto-ocultar alertas después de 5 segundos
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

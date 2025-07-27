@@ -1,0 +1,814 @@
+{% extends 'socios/base.html' %}
+
+{% block title %}Registrar Pago - Gimnasio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="mb-0">
+                <i class="fas fa-dollar-sign text-success me-2"></i>
+                Registrar Pago
+            </h1>
+            <p class="text-muted mb-0">Registra el pago de membresía de cualquier socio</p>
+        </div>
+        <a href="{% url 'lista_socios' %}" class="btn btn-outline-secondary btn-custom">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Socios
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Búsqueda de Socio -->
+        <div class="card stat-card mb-4">
+            <div class="card-body">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-search me-2"></i>Buscar Socio
+                </h5>
+                <div class="row">
+                    <div class="col-md-8">
+                        <input type="text" class="form-control form-control-lg" id="buscarSocio" 
+                               placeholder="Buscar por nombre, apellido o DNI..." autocomplete="off">
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select form-select-lg" id="filtroEstado">
+                            <option value="">Todos los socios</option>
+                            <option value="vencidos">Solo vencidos</option>
+                            <option value="al_dia">Solo al día</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Resultados de búsqueda -->
+                <div id="resultadosBusqueda" class="mt-3" style="display: none;">
+                    <h6>Resultados:</h6>
+                    <div id="listaSocios" class="list-group">
+                        <!-- Se llena con JavaScript -->
+                    </div>
+                </div>
+                
+                <!-- Socio no encontrado -->
+                <div id="socioNoEncontrado" class="alert alert-warning mt-3" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No se encontraron socios con ese criterio.
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Pago (inicialmente oculto) -->
+        <div class="card stat-card" id="formularioPago" style="display: none;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="text-success mb-0">
+                        <i class="fas fa-money-bill-wave me-2"></i>Datos del Pago
+                    </h5>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limpiarFormulario()">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                </div>
+
+                <!-- Info del socio seleccionado -->
+                <div class="alert alert-info" id="infoSocioSeleccionado">
+                    <!-- Se llena con JavaScript -->
+                </div>
+
+                <form id="formPago">
+                    {% csrf_token %}
+                    <input type="hidden" id="socio_id" name="socio_id">
+                    
+                    <!-- FECHAS MANUALES -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_inicio" class="form-label">
+                                <i class="fas fa-play text-info me-1"></i>
+                                Fecha de Inicio *
+                            </label>
+                            <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                            <div class="form-text">Cuándo comienza el nuevo período</div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-outline-info btn-sm me-1" onclick="setFechaDesdeVencimiento()">
+                                    <i class="fas fa-calendar-plus me-1"></i>Continuar desde vencimiento
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm" onclick="setFechaDesdeHoy()">
+                                    <i class="fas fa-calendar-day me-1"></i>🕐 PAGAR DESDE HOY
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="fecha_vencimiento" class="form-label">
+                                <i class="fas fa-stop text-warning me-1"></i>
+                                Fecha de Vencimiento *
+                            </label>
+                            <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" required>
+                            <div class="form-text">Cuándo termina el período</div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-outline-success btn-sm" onclick="calcular30Dias()">
+                                    <i class="fas fa-plus me-1"></i>+30 días
+                                </button>
+                                <span id="diasPeriodo" class="badge bg-info ms-2" style="display: none;"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- PLAN Y RESUMEN -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="plan_nuevo" class="form-label">Plan *</label>
+                            <select class="form-select" id="plan_nuevo" name="plan_nuevo" required>
+                                <!-- Se llena con JavaScript -->
+                            </select>
+                            <div class="form-text">Puede mantener el actual o cambiarlo</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-2">
+                                        <i class="fas fa-calendar-alt text-info me-2"></i>Resumen del Período
+                                    </h6>
+                                    <div id="resumenPeriodo">
+                                        Selecciona las fechas para ver el resumen
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MONTO Y COMPARACIÓN -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="monto" class="form-label">Monto *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="monto" name="monto" step="0.01" min="0" required>
+                            </div>
+                            <div class="form-text">Editable según necesidad</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title mb-2">
+                                        <i class="fas fa-exchange-alt text-info me-2"></i>Estado del Plan
+                                    </h6>
+                                    <div id="comparacionPlan">
+                                        Selecciona un plan para ver el estado
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- MÉTODO DE PAGO -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="metodo_pago" class="form-label">Método de Pago *</label>
+                            <select class="form-select" id="metodo_pago" name="metodo_pago" required>
+                                <option value="">Selecciona método</option>
+                                <option value="efectivo">💵 Efectivo</option>
+                                <option value="transferencia">🏦 Transferencia</option>
+                                <option value="tarjeta">💳 Tarjeta</option>
+                                <option value="otro">❓ Otro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="comprobante" class="form-label">Comprobante</label>
+                            <input type="text" class="form-control" id="comprobante" name="comprobante" 
+                                   placeholder="Número de comprobante (opcional)">
+                        </div>
+                    </div>
+                    
+                    <!-- RESUMEN FINAL -->
+                    <div class="mb-4">
+                        <div class="card bg-light border-success">
+                            <div class="card-body">
+                                <h6 class="card-title mb-2 text-success">
+                                    <i class="fas fa-check-circle me-2"></i>Resumen del Pago
+                                </h6>
+                                <div id="infoPago">
+                                    Completa todos los datos para ver el resumen
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary btn-custom me-md-2" onclick="limpiarFormulario()">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-success btn-custom">
+                            <i class="fas fa-save me-2"></i>Registrar Pago
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="modalConfirmacionPago" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle me-2"></i>¡Pago Registrado!
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoConfirmacionPago">
+                <!-- Se llena con JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="registrarOtroPago()">
+                    <i class="fas fa-plus me-2"></i>Registrar Otro Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sistema de pagos iniciado');
+    
+    // Elementos DOM
+    const buscarInput = document.getElementById('buscarSocio');
+    const resultados = document.getElementById('resultadosBusqueda');
+    const formulario = document.getElementById('formularioPago');
+    
+    if (!buscarInput || !resultados || !formulario) {
+        console.error('Error: Elementos DOM no encontrados');
+        return;
+    }
+    
+    // Datos desde Django
+    const sociosData = {{ socios_json|safe }};
+    const planesData = {{ planes_json|safe }};
+    
+    console.log(`Cargados: ${sociosData.length} socios, ${planesData.length} planes`);
+    
+    let socioSeleccionado = null;
+    
+    // Event listeners principales
+    buscarInput.addEventListener('input', buscarSocios);
+    document.getElementById('filtroEstado').addEventListener('change', buscarSocios);
+    document.getElementById('fecha_inicio').addEventListener('change', calcularResumenPeriodo);
+    document.getElementById('fecha_vencimiento').addEventListener('change', calcularResumenPeriodo);
+    
+    function buscarSocios() {
+        const termino = buscarInput.value.toLowerCase().trim();
+        const filtro = document.getElementById('filtroEstado').value;
+        
+        if (termino.length < 2 && !filtro) {
+            ocultarResultados();
+            return;
+        }
+        
+        const sociosFiltrados = sociosData.filter(socio => {
+            const coincideTermino = termino.length < 2 || 
+                socio.nombre.toLowerCase().includes(termino) ||
+                socio.apellido.toLowerCase().includes(termino) ||
+                socio.dni.includes(termino);
+            
+            const coincideFiltro = !filtro || 
+                (filtro === 'vencidos' && !socio.esta_al_dia) ||
+                (filtro === 'al_dia' && socio.esta_al_dia);
+            
+            return coincideTermino && coincideFiltro;
+        });
+        
+        mostrarResultados(sociosFiltrados);
+    }
+    
+    function mostrarResultados(socios) {
+        const contenedor = document.getElementById('listaSocios');
+        const noEncontrado = document.getElementById('socioNoEncontrado');
+        
+        if (socios.length === 0) {
+            resultados.style.display = 'none';
+            noEncontrado.style.display = 'block';
+            return;
+        }
+        
+        noEncontrado.style.display = 'none';
+        resultados.style.display = 'block';
+        
+        contenedor.innerHTML = socios.map(socio => `
+            <div class="list-group-item list-group-item-action socio-item" 
+                 style="cursor: pointer;" data-socio-id="${socio.id}">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">${socio.nombre} ${socio.apellido}</h6>
+                        <p class="mb-1">DNI: ${socio.dni} | Plan: ${socio.plan}</p>
+                        <small class="text-muted">Email: ${socio.email}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${socio.esta_al_dia ? 'bg-success' : 'bg-danger'} mb-1">
+                            ${socio.estado_texto}
+                        </span>
+                        <br>
+                        <small class="text-muted">Vence: ${socio.fecha_vencimiento}</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Event listeners para selección
+        document.querySelectorAll('.socio-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const socioId = parseInt(this.getAttribute('data-socio-id'));
+                seleccionarSocio(socioId);
+            });
+        });
+    }
+    
+    function ocultarResultados() {
+        resultados.style.display = 'none';
+        document.getElementById('socioNoEncontrado').style.display = 'none';
+    }
+    
+    function seleccionarSocio(socioId) {
+        socioSeleccionado = sociosData.find(s => s.id === socioId);
+        
+        if (!socioSeleccionado) {
+            alert('Error: Socio no encontrado');
+            return;
+        }
+        
+        cargarDatosSocio();
+        configurarFormulario();
+        mostrarFormulario();
+    }
+    
+    function cargarDatosSocio() {
+    // VERIFICAR QUE EL SOCIO ESTÁ SELECCIONADO
+    if (!socioSeleccionado) {
+        console.error('Error: No hay socio seleccionado');
+        return;
+    }
+    
+    // VERIFICAR QUE TODOS LOS ELEMENTOS EXISTEN
+    const socioIdInput = document.getElementById('socio_id');
+    const planSelect = document.getElementById('plan_nuevo');
+    const montoInput = document.getElementById('monto');
+    const infoSocio = document.getElementById('infoSocioSeleccionado');
+    
+    console.log('Elementos encontrados:');
+    console.log('socio_id:', !!socioIdInput);
+    console.log('plan_nuevo:', !!planSelect);
+    console.log('monto:', !!montoInput);
+    console.log('infoSocioSeleccionado:', !!infoSocio);
+    
+    if (!socioIdInput || !planSelect || !montoInput) {
+        console.error('Error: Elementos críticos del formulario no encontrados');
+        return;
+    }
+    
+    // Llenar ID del socio
+    socioIdInput.value = socioSeleccionado.id;
+    
+    // Llenar selector de planes
+    planSelect.innerHTML = planesData.map(plan => 
+        `<option value="${plan.id}" data-precio="${plan.precio}" 
+            ${plan.id === socioSeleccionado.plan_id ? 'selected' : ''}>
+            ${plan.nombre} - $${parseFloat(plan.precio).toLocaleString()}
+        </option>`
+    ).join('');
+    
+    // Establecer monto inicial
+    const planActual = planesData.find(p => p.id === socioSeleccionado.plan_id);
+    if (planActual) {
+        montoInput.value = planActual.precio;
+    }
+    
+    // Mostrar información del socio (SOLO si el elemento existe)
+    if (infoSocio) {
+        infoSocio.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-1">${socioSeleccionado.nombre} ${socioSeleccionado.apellido}</h5>
+                    <p class="mb-1">DNI: ${socioSeleccionado.dni} | Plan actual: ${socioSeleccionado.plan}</p>
+                    <span class="badge ${socioSeleccionado.esta_al_dia ? 'bg-success' : 'bg-danger'}">
+                        ${socioSeleccionado.estado_texto}
+                    </span>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="text-muted">Vencimiento actual:</div>
+                    <strong>${socioSeleccionado.fecha_vencimiento}</strong>
+                </div>
+            </div>
+        `;
+    } else {
+        console.warn('Elemento infoSocioSeleccionado no encontrado - continuando sin mostrar info del socio');
+    }
+}
+    
+    function configurarFormulario() {
+        // Event listener para cambio de plan
+        document.getElementById('plan_nuevo').addEventListener('change', function() {
+            const planSeleccionado = this.options[this.selectedIndex];
+            const precio = planSeleccionado.getAttribute('data-precio');
+            
+            document.getElementById('monto').value = precio;
+            actualizarComparacionPlan();
+            actualizarResumenPago();
+        });
+        
+        // Event listeners para actualizar resumen
+        ['metodo_pago', 'monto'].forEach(id => {
+            document.getElementById(id).addEventListener('change', actualizarResumenPago);
+        });
+        
+        // Establecer fechas sugeridas pero editables
+        establecerFechasSugeridas();
+        
+        // Mostrar sugerencias visuales
+        mostrarSugerenciasFechas();
+        
+        actualizarComparacionPlan();
+    }
+    
+    function establecerFechasSugeridas() {
+    // NO SETEAR FECHAS AUTOMÁTICAMENTE - Solo dejar los campos vacíos para edición libre
+    
+    // Asegurar que los campos sean editables
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaVencimiento = document.getElementById('fecha_vencimiento');
+    
+    if (fechaInicio && fechaVencimiento) {
+        // Limpiar cualquier restricción
+        fechaInicio.removeAttribute('readonly');
+        fechaVencimiento.removeAttribute('readonly');
+        fechaInicio.removeAttribute('disabled');
+        fechaVencimiento.removeAttribute('disabled');
+        
+        // Dejar campos vacíos para edición manual
+        fechaInicio.value = '';
+        fechaVencimiento.value = '';
+        
+        console.log('Campos de fecha listos para edición manual');
+    }
+    
+    // No calcular resumen hasta que el usuario seleccione fechas
+    document.getElementById('resumenPeriodo').innerHTML = 'Usa los botones de ayuda o edita las fechas manualmente';
+}
+    
+    function mostrarSugerenciasFechas() {
+        // Buscar dónde insertar las sugerencias
+        const campoVencimiento = document.getElementById('fecha_vencimiento').parentElement;
+        
+        // Verificar si ya existen sugerencias
+        const sugerenciasExistentes = campoVencimiento.querySelector('.sugerencias-fechas');
+        if (sugerenciasExistentes) {
+            sugerenciasExistentes.remove();
+        }
+        
+        // Crear contenedor de sugerencias
+        const contenedorSugerencias = document.createElement('div');
+        contenedorSugerencias.className = 'alert alert-info mt-3 sugerencias-fechas';
+        
+        let mensaje = '';
+        let botonPrincipal = '';
+        
+        if (socioSeleccionado.esta_al_dia) {
+            mensaje = `💡 <strong>Sugerencia:</strong> Socio al día - vence el ${socioSeleccionado.fecha_vencimiento}`;
+            botonPrincipal = `
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setFechaDesdeVencimiento()">
+                    <i class="fas fa-calendar-plus me-1"></i>Continuar desde vencimiento
+                </button>
+            `;
+        } else {
+            mensaje = `💡 <strong>Sugerencia:</strong> Socio vencido - renovar desde hoy`;
+            botonPrincipal = `
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="setFechaDesdeHoy()">
+                    <i class="fas fa-calendar-day me-1"></i>Renovar desde hoy
+                </button>
+            `;
+        }
+        
+        contenedorSugerencias.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center">
+                <div>${mensaje}</div>
+                <div>
+                    ${botonPrincipal}
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="limpiarFechas()">
+                        <i class="fas fa-eraser me-1"></i>Limpiar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Insertar después del campo de fecha_vencimiento
+        campoVencimiento.appendChild(contenedorSugerencias);
+    }
+    
+    // REEMPLAZA LA FUNCIÓN mostrarFormulario() CON ESTA:
+function mostrarFormulario() {
+    // Verificar que los elementos existen antes de usarlos
+    const resultados = document.getElementById('resultadosBusqueda');
+    const formulario = document.getElementById('formularioPago');
+    
+    console.log('Elementos para mostrar formulario:');
+    console.log('resultados:', !!resultados);
+    console.log('formulario:', !!formulario);
+    
+    // Ocultar resultados solo si existe
+    if (resultados) {
+        resultados.style.display = 'none';
+    }
+    
+    // Ocultar mensaje de "no encontrado" si existe
+    const noEncontrado = document.getElementById('socioNoEncontrado');
+    if (noEncontrado) {
+        noEncontrado.style.display = 'none';
+    }
+    
+    // Mostrar formulario solo si existe
+    if (formulario) {
+        formulario.style.display = 'block';
+        formulario.scrollIntoView({ behavior: 'smooth' });
+        console.log('Formulario mostrado correctamente');
+    } else {
+        console.error('ERROR: Elemento formularioPago no encontrado');
+        alert('Error: No se puede mostrar el formulario de pago');
+    }
+}
+    
+    function calcularResumenPeriodo() {
+        const fechaInicio = document.getElementById('fecha_inicio').value;
+        const fechaVencimiento = document.getElementById('fecha_vencimiento').value;
+        
+        if (!fechaInicio || !fechaVencimiento) {
+            document.getElementById('resumenPeriodo').innerHTML = 'Selecciona ambas fechas';
+            document.getElementById('diasPeriodo').style.display = 'none';
+            return;
+        }
+        
+        const inicio = new Date(fechaInicio);
+        const vencimiento = new Date(fechaVencimiento);
+        const dias = Math.ceil((vencimiento - inicio) / (1000 * 60 * 60 * 24));
+        
+        if (dias <= 0) {
+            document.getElementById('resumenPeriodo').innerHTML = 
+                '<span class="text-danger">⚠ El vencimiento debe ser posterior al inicio</span>';
+            document.getElementById('diasPeriodo').style.display = 'none';
+            return;
+        }
+        
+        const esEstandar = dias === 30;
+        document.getElementById('resumenPeriodo').innerHTML = `
+            <div class="d-flex justify-content-between">
+                <span><strong>Duración:</strong> ${dias} días</span>
+                <span class="badge ${esEstandar ? 'bg-success' : 'bg-warning'}">
+                    ${esEstandar ? '✓ Estándar' : '⚠ No estándar'}
+                </span>
+            </div>
+            <small class="text-muted">
+                ${inicio.toLocaleDateString('es-ES')} → ${vencimiento.toLocaleDateString('es-ES')}
+            </small>
+        `;
+        
+        const badge = document.getElementById('diasPeriodo');
+        badge.textContent = `${dias} días`;
+        badge.className = `badge ms-2 ${esEstandar ? 'bg-success' : 'bg-warning'}`;
+        badge.style.display = 'inline';
+        
+        actualizarResumenPago();
+    }
+    
+    function actualizarComparacionPlan() {
+        const planNuevoId = parseInt(document.getElementById('plan_nuevo').value);
+        const esMismoPlan = planNuevoId === socioSeleccionado.plan_id;
+        
+        if (esMismoPlan) {
+            document.getElementById('comparacionPlan').innerHTML = 
+                '<span class="text-success"><i class="fas fa-check me-1"></i>Mantiene plan actual</span>';
+        } else {
+            const planNuevo = planesData.find(p => p.id === planNuevoId);
+            document.getElementById('comparacionPlan').innerHTML = `
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted">Actual:</small><br>
+                        <strong>${socioSeleccionado.plan}</strong>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted">Nuevo:</small><br>
+                        <strong class="text-primary">${planNuevo.nombre}</strong>
+                    </div>
+                </div>
+                <span class="badge bg-warning mt-1">
+                    <i class="fas fa-exchange-alt me-1"></i>Cambio de plan
+                </span>
+            `;
+        }
+    }
+    
+    function actualizarResumenPago() {
+        if (!socioSeleccionado) return;
+        
+        const fechaInicio = document.getElementById('fecha_inicio').value;
+        const fechaVencimiento = document.getElementById('fecha_vencimiento').value;
+        const planId = document.getElementById('plan_nuevo').value;
+        const metodo = document.getElementById('metodo_pago').value;
+        const monto = document.getElementById('monto').value;
+        
+        if (!fechaInicio || !fechaVencimiento || !planId || !metodo || !monto) {
+            document.getElementById('infoPago').innerHTML = 
+                '<span class="text-muted">Completa todos los campos para ver el resumen</span>';
+            return;
+        }
+        
+        const planSeleccionado = planesData.find(p => p.id == planId);
+        const esCambioPlan = parseInt(planId) !== socioSeleccionado.plan_id;
+        const metodoTexto = document.getElementById('metodo_pago').options[document.getElementById('metodo_pago').selectedIndex].text;
+        
+        document.getElementById('infoPago').innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Socio:</strong> ${socioSeleccionado.nombre} ${socioSeleccionado.apellido}<br>
+                    <strong>Plan:</strong> ${planSeleccionado.nombre}<br>
+                    <strong>Monto:</strong> $${parseFloat(monto).toLocaleString()}
+                </div>
+                <div class="col-md-6">
+                    <strong>Período:</strong> ${new Date(fechaInicio).toLocaleDateString('es-ES')} - ${new Date(fechaVencimiento).toLocaleDateString('es-ES')}<br>
+                    <strong>Método:</strong> ${metodoTexto}<br>
+                    ${esCambioPlan ? 
+                        '<span class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i>Cambio de plan</span>' : 
+                        '<span class="text-success"><i class="fas fa-check me-1"></i>Mismo plan</span>'
+                    }
+                </div>
+            </div>
+        `;
+    }
+    
+    // Limpiar formulario
+    window.limpiarFormulario = function() {
+        socioSeleccionado = null;
+        formulario.style.display = 'none';
+        buscarInput.value = '';
+        document.getElementById('filtroEstado').value = '';
+        ocultarResultados();
+        document.getElementById('formPago').reset();
+    };
+    
+    // Procesar envío del formulario
+    document.getElementById('formPago').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!socioSeleccionado) {
+            alert('Error: No hay socio seleccionado');
+            return;
+        }
+        
+        // Validaciones finales
+        const fechaInicio = document.getElementById('fecha_inicio').value;
+        const fechaVencimiento = document.getElementById('fecha_vencimiento').value;
+        
+        if (!fechaInicio || !fechaVencimiento) {
+            alert('Error: Debes seleccionar ambas fechas');
+            return;
+        }
+        
+        if (new Date(fechaVencimiento) <= new Date(fechaInicio)) {
+            alert('Error: La fecha de vencimiento debe ser posterior a la de inicio');
+            return;
+        }
+        
+        // Preparar datos
+        const formData = new FormData(e.target);
+        const datosPago = {
+            socio_id: formData.get('socio_id'),
+            fecha_inicio: formData.get('fecha_inicio'),
+            fecha_vencimiento: formData.get('fecha_vencimiento'),
+            monto: formData.get('monto'),
+            metodo_pago: formData.get('metodo_pago'),
+            comprobante: formData.get('comprobante') || '',
+            plan_nuevo_id: formData.get('plan_nuevo')
+        };
+        
+        console.log('Enviando pago:', datosPago);
+        
+        try {
+            const response = await fetch('{% url "registrar_pago" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(datosPago)
+            });
+            
+            const resultado = await response.json();
+            console.log('Respuesta del servidor:', resultado);
+            
+            if (resultado.estado === 'ok') {
+                mostrarConfirmacionPago(resultado);
+            } else {
+                alert('Error: ' + resultado.mensaje);
+            }
+        } catch (error) {
+            console.error('Error al procesar el pago:', error);
+            alert('Error de conexión: ' + error.message);
+        }
+    });
+    
+    function mostrarConfirmacionPago(resultado) {
+        const fechaInicio = document.getElementById('fecha_inicio').value;
+        const fechaVencimiento = document.getElementById('fecha_vencimiento').value;
+        const planSeleccionado = planesData.find(p => p.id == document.getElementById('plan_nuevo').value);
+        const metodoTexto = document.getElementById('metodo_pago').options[document.getElementById('metodo_pago').selectedIndex].text;
+        const monto = document.getElementById('monto').value;
+        
+        document.getElementById('contenidoConfirmacionPago').innerHTML = `
+            <div class="text-center mb-4">
+                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                <h4 class="mt-2 text-success">¡Pago registrado exitosamente!</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">Detalles del pago:</h6>
+                            <ul class="list-unstyled mb-0">
+                                <li><strong>Socio:</strong> ${socioSeleccionado.nombre} ${socioSeleccionado.apellido}</li>
+                                <li><strong>Plan:</strong> ${planSeleccionado.nombre}</li>
+                                <li><strong>Período:</strong> ${new Date(fechaInicio).toLocaleDateString('es-ES')} - ${new Date(fechaVencimiento).toLocaleDateString('es-ES')}</li>
+                                <li><strong>Duración:</strong> ${resultado.periodo_dias} días</li>
+                                <li><strong>Monto:</strong> ${parseFloat(monto).toLocaleString()}</li>
+                                <li><strong>Método:</strong> ${metodoTexto}</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Estado:</strong> ${resultado.mensaje}
+                    </div>
+                    
+                    ${resultado.cambio_plan ? `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exchange-alt me-2"></i>
+                            <strong>Cambio de plan:</strong> Actualizado a "${resultado.plan_nuevo}"
+                        </div>
+                    ` : ''}
+                    
+                    ${!resultado.es_periodo_estandar ? `
+                        <div class="alert alert-info">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            <strong>Período personalizado:</strong> ${resultado.periodo_dias} días (no estándar de 30)
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmacionPago'));
+        modal.show();
+    }
+    
+    window.registrarOtroPago = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacionPago'));
+        modal.hide();
+        limpiarFormulario();
+        buscarInput.focus();
+    };
+    // AGREGAR ESTE CÓDIGO ANTES DE });
+
+// Función para hacer fechas completamente editables
+function hacerFechasEditables() {
+    const fechaInicio = document.getElementById('fecha_inicio');
+    const fechaVencimiento = document.getElementById('fecha_vencimiento');
+    
+    if (fechaInicio && fechaVencimiento) {
+        fechaInicio.removeAttribute('readonly');
+        fechaVencimiento.removeAttribute('readonly');
+        
+        fechaInicio.addEventListener('change', function() {
+            calcularResumenPeriodo();
+        });
+        
+        fechaVencimiento.addEventListener('change', function() {
+            calcularResumenPeriodo();
+        });
+    }
+}
+
+// Función mejorada para setear desde hoy
+window.setFechaDesdeHoy = function() {
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha_inicio').value = hoy;
+    
+    const fecha = new Date(hoy);
+    fecha.setDate(fecha.getDate() + 30);
+    document.getElementById('fecha_vencimiento').value = fecha.toISOString().split('T')[0];
+    
+    calcularResumenPeriodo();
+    hacerFechasEditables();
+};
+});
+</script>
+{% endblock %}

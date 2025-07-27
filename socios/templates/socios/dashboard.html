@@ -1,0 +1,267 @@
+{% extends 'socios/base.html' %}
+
+{% block title %}Dashboard - Gimnasio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="mb-0">
+        <i class="fas fa-chart-dashboard text-primary me-2"></i>
+        Dashboard del Gimnasio
+    </h1>
+    <p class="text-muted mb-0">Resumen general del estado actual</p>
+</div>
+
+<!-- Estadísticas principales -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-primary-gradient me-3">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        Total Socios
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_socios }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-success-gradient me-3">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Socios al Día
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ socios_al_dia }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-warning-gradient me-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                        Socios Vencidos
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ socios_vencidos }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon bg-success-gradient me-3">
+                    <i class="fas fa-dollar-sign"></i>
+                </div>
+                <div>
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Recaudación {{ mes_actual }}
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">${{ recaudacion_mes|floatformat:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos y datos adicionales -->
+<div class="row">
+    <!-- Gráfico de Ingresos por Día -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card stat-card mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Ingresos de los Últimos 7 Días</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="ingresosChart" width="100" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Distribución por Plan -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card stat-card mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Distribución por Plan</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="planesChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actividad Reciente -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card stat-card mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-door-open me-2"></i>
+                    Últimos Ingresos
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if ultimos_ingresos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Socio</th>
+                                    <th>Fecha/Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ingreso in ultimos_ingresos %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ ingreso.socio.nombre }} {{ ingreso.socio.apellido }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ ingreso.socio.plan.nombre }}</small>
+                                    </td>
+                                    <td>
+                                        {{ ingreso.fecha|date:"d/m/Y" }}
+                                        <br>
+                                        <small class="text-muted">{{ ingreso.fecha|time:"H:i" }}</small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-3">No hay ingresos recientes</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card stat-card mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-money-bill me-2"></i>
+                    Últimos Pagos
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if ultimos_pagos %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Socio</th>
+                                    <th>Monto</th>
+                                    <th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pago in ultimos_pagos %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ pago.socio.nombre }} {{ pago.socio.apellido }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ pago.metodo_pago|capfirst }}</small>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">${{ pago.monto|floatformat:0 }}</strong>
+                                    </td>
+                                    <td>
+                                        {{ pago.fecha_pago|date:"d/m/Y" }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center py-3">No hay pagos recientes</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Datos por defecto si no llegan del servidor
+const labelsIngresos = {{ labels_ingresos|default:"[]"|safe }};
+const datosIngresos = {{ datos_ingresos|default:"[]"|safe }};
+const labelsPlanes = {{ labels_planes|default:"[]"|safe }};
+const datosPlanes = {{ datos_planes|default:"[]"|safe }};
+
+// Gráfico de Ingresos por Día
+const ctxIngresos = document.getElementById('ingresosChart').getContext('2d');
+const ingresosChart = new Chart(ctxIngresos, {
+    type: 'line',
+    data: {
+        labels: labelsIngresos,
+        datasets: [{
+            label: 'Ingresos',
+            data: datosIngresos,
+            borderColor: '#3498db',
+            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Gráfico de Distribución por Plan
+const ctxPlanes = document.getElementById('planesChart').getContext('2d');
+const planesChart = new Chart(ctxPlanes, {
+    type: 'doughnut',
+    data: {
+        labels: labelsPlanes,
+        datasets: [{
+            data: datosPlanes,
+            backgroundColor: [
+                '#3498db',
+                '#27ae60', 
+                '#f39c12',
+                '#e74c3c'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

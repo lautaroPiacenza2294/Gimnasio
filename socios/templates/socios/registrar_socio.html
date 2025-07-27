@@ -1,0 +1,290 @@
+{% extends 'socios/base.html' %}
+
+{% block title %}Registrar Socio - Gimnasio{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="mb-0">
+                <i class="fas fa-user-plus text-primary me-2"></i>
+                Registrar Nuevo Socio
+            </h1>
+            <p class="text-muted mb-0">Completa todos los datos del nuevo socio</p>
+        </div>
+        <a href="{% url 'lista_socios' %}" class="btn btn-outline-secondary btn-custom">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Lista
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card stat-card">
+            <div class="card-body">
+                <form method="post" id="formRegistroSocio">
+                    {% csrf_token %}
+                    
+                    <!-- Datos Personales -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-user me-2"></i>Datos Personales
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label">Nombre *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa el nombre.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="apellido" class="form-label">Apellido *</label>
+                                <input type="text" class="form-control" id="apellido" name="apellido" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa el apellido.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="dni" class="form-label">DNI *</label>
+                                <input type="text" class="form-control" id="dni" name="dni" pattern="[0-9]{7,8}" required>
+                                <div class="form-text">Solo números, sin puntos ni espacios</div>
+                                <div class="invalid-feedback">
+                                    DNI debe tener 7 u 8 dígitos.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email *</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un email válido.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="telefono" class="form-label">Teléfono</label>
+                                <input type="tel" class="form-control" id="telefono" name="telefono" placeholder="351-1234567">
+                                <div class="form-text">Opcional</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="contacto_emergencia" class="form-label">Contacto de Emergencia *</label>
+                                <input type="tel" class="form-control" id="contacto_emergencia" name="contacto_emergencia" required>
+                                <div class="form-text">Teléfono de familiar o persona de contacto</div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un contacto de emergencia.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plan y Acceso -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-dumbbell me-2"></i>Plan y Acceso
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="plan" class="form-label">Plan *</label>
+                                <select class="form-select" id="plan" name="plan" required>
+                                    <option value="">Selecciona un plan</option>
+                                    {% for plan in planes %}
+                                    <option value="{{ plan.id }}" data-precio="{{ plan.precio }}" data-dias="{{ plan.cant_dias_semana }}">
+                                        {{ plan.nombre }} - ${{ plan.precio|floatformat:0 }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="invalid-feedback">
+                                    Por favor selecciona un plan.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="codigo_acceso" class="form-label">Código de Acceso *</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="codigo_acceso" name="codigo_acceso" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="generarCodigo">
+                                        <i class="fas fa-dice"></i> Generar
+                                    </button>
+                                </div>
+                                <div class="form-text">Código único para fichaje</div>
+                                <div class="invalid-feedback">
+                                    Por favor ingresa un código de acceso.
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="fecha_inscripcion" class="form-label">Fecha de Inscripción *</label>
+                                <input type="date" class="form-control" id="fecha_inscripcion" name="fecha_inscripcion" required>
+                                <div class="invalid-feedback">
+                                    Por favor selecciona la fecha de inscripción.
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-2">Información del Plan</h6>
+                                        <div id="infoPlan" class="text-muted">
+                                            Selecciona un plan para ver los detalles
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-4">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-sticky-note me-2"></i>Observaciones
+                        </h5>
+                        <div class="mb-3">
+                            <label for="observaciones" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Notas adicionales sobre el socio (opcional)"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'lista_socios' %}" class="btn btn-outline-secondary btn-custom me-md-2">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-custom">
+                            <i class="fas fa-save me-2"></i>Registrar Socio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">¿Confirmar registro?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="contenidoConfirmacion">
+                <!-- Se llena con JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmarRegistro">Confirmar Registro</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Establecer fecha actual por defecto
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    document.getElementById('fecha_inscripcion').value = fechaHoy;
+    
+    // Actualizar info del plan cuando cambie la selección
+    document.getElementById('plan').addEventListener('change', function() {
+        const planSeleccionado = this.options[this.selectedIndex];
+        const infoPlan = document.getElementById('infoPlan');
+        
+        if (planSeleccionado.value) {
+            const precio = planSeleccionado.getAttribute('data-precio');
+            const dias = planSeleccionado.getAttribute('data-dias');
+            
+            infoPlan.innerHTML = `
+                <strong>${planSeleccionado.text}</strong><br>
+                <small class="text-success">💰 $${precio}</small><br>
+                <small class="text-info">📅 ${dias} días por semana</small>
+            `;
+        } else {
+            infoPlan.innerHTML = 'Selecciona un plan para ver los detalles';
+        }
+    });
+    
+    // Generar código automático
+    document.getElementById('generarCodigo').addEventListener('click', function() {
+        const codigo = 'SOC' + Math.floor(Math.random() * 9000 + 1000);
+        document.getElementById('codigo_acceso').value = codigo;
+    });
+    
+    // Validación en tiempo real del DNI
+    document.getElementById('dni').addEventListener('input', function() {
+        const dni = this.value;
+        if (dni && (dni.length < 7 || dni.length > 8 || !/^\d+$/.test(dni))) {
+            this.setCustomValidity('DNI debe tener 7 u 8 dígitos');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Formatear nombre y apellido (primera letra mayúscula)
+    function formatearNombre(input) {
+        input.addEventListener('blur', function() {
+            this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1).toLowerCase();
+        });
+    }
+    
+    formatearNombre(document.getElementById('nombre'));
+    formatearNombre(document.getElementById('apellido'));
+    
+    // Manejar envío del formulario
+    document.getElementById('formRegistroSocio').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (this.checkValidity()) {
+            // Mostrar modal de confirmación
+            mostrarConfirmacion();
+        } else {
+            // Mostrar errores de validación
+            this.classList.add('was-validated');
+        }
+    });
+    
+    // Confirmar registro
+    document.getElementById('confirmarRegistro').addEventListener('click', function() {
+        document.getElementById('formRegistroSocio').submit();
+    });
+});
+
+function mostrarConfirmacion() {
+    const form = document.getElementById('formRegistroSocio');
+    const formData = new FormData(form);
+    
+    const planSeleccionado = document.getElementById('plan').options[document.getElementById('plan').selectedIndex];
+    
+    const contenido = `
+        <div class="row">
+            <div class="col-12">
+                <h6>Datos del nuevo socio:</h6>
+                <ul class="list-unstyled">
+                    <li><strong>Nombre:</strong> ${formData.get('nombre')} ${formData.get('apellido')}</li>
+                    <li><strong>DNI:</strong> ${formData.get('dni')}</li>
+                    <li><strong>Email:</strong> ${formData.get('email')}</li>
+                    <li><strong>Plan:</strong> ${planSeleccionado.text}</li>
+                    <li><strong>Código:</strong> ${formData.get('codigo_acceso')}</li>
+                    <li><strong>Fecha:</strong> ${formData.get('fecha_inscripcion')}</li>
+                </ul>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Se registrará el socio con estos datos.
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('contenidoConfirmacion').innerHTML = contenido;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmacion'));
+    modal.show();
+}
+</script>
+{% endblock %}

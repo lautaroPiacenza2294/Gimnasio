@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosco de Fichaje - Gimnasio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .kiosco-container {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .kiosco-card {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            padding: 3rem;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .kiosco-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+        
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            50% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+            100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+        }
+        
+        .logo {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+        
+        .fingerprint-area {
+            background: linear-gradient(145deg, #e0e0e0, #f0f0f0);
+            border: 3px dashed #ccc;
+            border-radius: 20px;
+            padding: 3rem;
+            margin: 2rem 0;
+            transition: all 0.3s ease;
+            cursor: not-allowed;
+        }
+        
+        .fingerprint-area.disabled {
+            opacity: 0.6;
+        }
+        
+        .fingerprint-icon {
+            font-size: 4rem;
+            color: #999;
+            margin-bottom: 1rem;
+        }
+        
+        .divider {
+            margin: 2rem 0;
+            position: relative;
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+        
+        .divider span {
+            background: white;
+            padding: 0 1rem;
+            color: #666;
+            font-weight: bold;
+        }
+        
+        .dni-input {
+            font-size: 1.5rem;
+            padding: 1rem;
+            border: 3px solid #e0e0e0;
+            border-radius: 15px;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dni-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+            outline: none;
+        }
+        
+        .btn-fichar {
+            font-size: 1.5rem;
+            padding: 1rem 3rem;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        
+        .btn-fichar:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-fichar:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            z-index: 1000;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .result-card.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        
+        .result-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .result-title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        .result-info {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+        
+        .danger {
+            color: #dc3545;
+        }
+        
+        .warning {
+            color: #ffc107;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .admin-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 50%;
+            text-decoration: none;
+            color: #666;
+            transition: all 0.3s ease;
+        }
+        
+        .admin-link:hover {
+            background: white;
+            color: #333;
+            transform: scale(1.1);
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .loading.show {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="kiosco-container">
+        <div class="kiosco-card">
+            <div class="logo">
+                <i class="fas fa-dumbbell"></i>
+            </div>
+            <h1 class="title">CONTROL DE ACCESO</h1>
+            
+            <!-- Área de huella (deshabilitada por ahora) -->
+            <div class="fingerprint-area disabled">
+                <div class="fingerprint-icon">
+                    <i class="fas fa-fingerprint"></i>
+                </div>
+                <h3>Apoya tu dedo aquí</h3>
+                <p class="text-muted">Sistema de huella próximamente</p>
+            </div>
+            
+            <div class="divider">
+                <span>O</span>
+            </div>
+            
+            <!-- Ingreso por DNI -->
+            <div class="dni-section">
+                <input type="text" 
+                       class="dni-input" 
+                       id="dniInput" 
+                       placeholder="Ingresa tu DNI" 
+                       maxlength="10"
+                       autocomplete="off">
+                
+                <button class="btn btn-fichar" id="btnFichar">
+                    <i class="fas fa-sign-in-alt me-2"></i>
+                    <span class="btn-text">INGRESAR</span>
+                    <i class="fas fa-spinner loading ms-2"></i>
+                </button>
+            </div>
+            
+            <div class="mt-4">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Ingresa tu DNI sin puntos ni espacios
+                </small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay y modal de resultado -->
+    <div class="overlay" id="overlay"></div>
+    <div class="result-card" id="resultCard">
+        <div class="result-icon" id="resultIcon"></div>
+        <div class="result-title" id="resultTitle"></div>
+        <div class="result-info" id="resultInfo"></div>
+        <button class="btn btn-secondary" onclick="cerrarResultado()">Continuar</button>
+    </div>
+    
+    <!-- Link a admin (oculto, solo para desarrolladores) -->
+    <a href="{% url 'dashboard' %}" class="admin-link" title="Panel Administrativo">
+        <i class="fas fa-cog"></i>
+    </a>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dniInput = document.getElementById('dniInput');
+            const btnFichar = document.getElementById('btnFichar');
+            const loading = document.querySelector('.loading');
+            const btnText = document.querySelector('.btn-text');
+            
+            // Focus automático en el input
+            dniInput.focus();
+            
+            // Solo números en DNI
+            dniInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+            
+            // Enter para fichar
+            dniInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    ficharPorDNI();
+                }
+            });
+            
+            // Click en botón
+            btnFichar.addEventListener('click', ficharPorDNI);
+            
+            async function ficharPorDNI() {
+                const dni = dniInput.value.trim();
+                
+                if (!dni) {
+                    mostrarResultado('warning', 'Ingresa tu DNI', 'Por favor, ingresa tu número de documento');
+                    return;
+                }
+                
+                if (dni.length < 7) {
+                    mostrarResultado('warning', 'DNI incompleto', 'El DNI debe tener al menos 7 dígitos');
+                    return;
+                }
+                
+                // Mostrar loading
+                mostrarLoading(true);
+                
+                try {
+                    const response = await fetch('/socios/fichar-dni/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({ dni: dni })
+                    });
+                    
+                    const resultado = await response.json();
+                    
+                    if (resultado.estado === 'aprobado') {
+                        mostrarResultadoExitoso(resultado);
+                    } else {
+                        mostrarResultadoError(resultado);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    mostrarResultado('danger', 'Error de conexión', 'No se pudo conectar con el servidor');
+                } finally {
+                    mostrarLoading(false);
+                }
+            }
+            
+            function mostrarResultadoExitoso(resultado) {
+                const info = `
+                    <div class="row text-start">
+                        <div class="col-12 mb-3">
+                            <h4>¡Bienvenido ${resultado.socio}!</h4>
+                        </div>
+                        <div class="col-6">
+                            <strong>Plan:</strong><br>
+                            ${resultado.plan}
+                        </div>
+                        <div class="col-6">
+                            <strong>Días restantes esta semana:</strong><br>
+                            <span class="badge bg-primary fs-6">${resultado.dias_restantes_semana} de ${resultado.dias_totales_semana}</span>
+                        </div>
+                        <div class="col-6 mt-3">
+                            <strong>Membresía vence:</strong><br>
+                            ${resultado.fecha_vencimiento}
+                        </div>
+                        <div class="col-6 mt-3">
+                            <strong>Días hasta vencimiento:</strong><br>
+                            <span class="badge ${resultado.dias_hasta_vencimiento > 7 ? 'bg-success' : 'bg-warning'} fs-6">
+                                ${resultado.dias_hasta_vencimiento} días
+                            </span>
+                        </div>
+                    </div>
+                `;
+                
+                mostrarResultado('success', '¡Acceso Permitido!', info);
+            }
+            
+            function mostrarResultadoError(resultado) {
+                let info = resultado.mensaje;
+                
+                if (resultado.socio) {
+                    info = `
+                        <div class="text-start">
+                            <h5>${resultado.socio}</h5>
+                            <p><strong>Plan:</strong> ${resultado.plan}</p>
+                            <p><strong>Estado:</strong> ${resultado.mensaje}</p>
+                            ${resultado.fecha_vencimiento ? `<p><strong>Vencimiento:</strong> ${resultado.fecha_vencimiento}</p>` : ''}
+                        </div>
+                    `;
+                }
+                
+                mostrarResultado('danger', 'Acceso Denegado', info);
+            }
+            
+            function mostrarResultado(tipo, titulo, info) {
+                const overlay = document.getElementById('overlay');
+                const card = document.getElementById('resultCard');
+                const icon = document.getElementById('resultIcon');
+                const title = document.getElementById('resultTitle');
+                const infoDiv = document.getElementById('resultInfo');
+                
+                // Configurar icono según tipo
+                const iconos = {
+                    'success': 'fas fa-check-circle success',
+                    'danger': 'fas fa-times-circle danger',
+                    'warning': 'fas fa-exclamation-triangle warning'
+                };
+                
+                icon.className = `result-icon ${iconos[tipo]}`;
+                title.textContent = titulo;
+                title.className = `result-title ${tipo}`;
+                infoDiv.innerHTML = info;
+                
+                // Mostrar modal
+                overlay.classList.add('show');
+                card.classList.add('show');
+                
+                // Limpiar input
+                dniInput.value = '';
+                
+                // Auto-cerrar después de 5 segundos para acceso exitoso
+                if (tipo === 'success') {
+                    setTimeout(cerrarResultado, 5000);
+                }
+            }
+            
+            function mostrarLoading(show) {
+                if (show) {
+                    btnFichar.disabled = true;
+                    btnText.textContent = 'VERIFICANDO...';
+                    loading.classList.add('show');
+                } else {
+                    btnFichar.disabled = false;
+                    btnText.textContent = 'INGRESAR';
+                    loading.classList.remove('show');
+                }
+            }
+            
+            window.cerrarResultado = function() {
+                const overlay = document.getElementById('overlay');
+                const card = document.getElementById('resultCard');
+                
+                overlay.classList.remove('show');
+                card.classList.remove('show');
+                
+                // Focus de vuelta al input
+                setTimeout(() => {
+                    dniInput.focus();
+                }, 300);
+            };
+            
+            // Función para obtener CSRF token
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            // Auto-focus cada 10 segundos (para kiosco)
+            setInterval(() => {
+                if (document.activeElement !== dniInput) {
+                    dniInput.focus();
+                }
+            }, 10000);
+        });
+    </script>
+</body>
+</html>
